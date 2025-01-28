@@ -123,8 +123,8 @@ with col2:
     with st.expander(f"{chat_settings}"):
         llm_model = st.selectbox(
             f"{chat_choose_llm}", 
-            ["LLaMa3.1 8B", "LLaMa3 8B", "OpenAI GPT-4o", "OpenAI GPT-4o mini", "OpenAI o1-preview", "OpenAI o1-mini"],
-            index=["LLaMa3.1 8B", "LLaMa3 8B", "OpenAI GPT-4o", "OpenAI GPT-4o mini", "OpenAI o1-preview", "OpenAI o1-mini"].index(st.session_state["llm_chat_model"]),
+            ["LLaMa3.1 8B", "Deep Seek R1 70B", "OpenAI GPT-4o", "OpenAI GPT-4o mini", "OpenAI o1-preview", "OpenAI o1-mini"],
+            index=["LLaMa3.1 8B", "Deep Seek R1 70B", "OpenAI GPT-4o", "OpenAI GPT-4o mini", "OpenAI o1-preview", "OpenAI o1-mini"].index(st.session_state["llm_chat_model"]),
         )
 
         llm_temp = st.slider(
@@ -142,7 +142,7 @@ with col2:
         model_map = {
             "OpenAI GPT-4o": "gpt-4o",
             "OpenAI GPT-4o mini": "gpt-4o-mini",
-            "LLaMa3 8B": "llama3-8b-8192", 
+            "Deep Seek R1 70B": "deepseek-r1-distill-llama-70b", 
             "LLaMa3.1 8B": "llama-3.1-8b-instant",
             "OpenAI o1-preview": "o1-preview", 
             "OpenAI o1-mini": "o1-mini"
