@@ -1,8 +1,10 @@
 [theme]
 primaryColor="#5bbf83"
 backgroundColor="#ffffff"
-secondaryBackgroundColor="#ebebeb"
+secondaryBackgroundColor = "#eeeeee"
 textColor="#333333"
+baseRadius = "large"
+borderColor = "#d8d8d8"
 
 [server]
 maxUploadSize = 2000
@@ -14,3 +16,11 @@ gatherUsageStats = false
 [client]
 toolbarMode = "minimal"
 showSidebarNavigation = false
+
+[theme.sidebar]
+primaryColor = "#5bbf83"
+backgroundColor = "#f8f8f8"
+textColor = "#333333"
+baseRadius = "large"
+borderColor = "#d8d8d8"
+secondaryBackgroundColor = "#eeeeee"

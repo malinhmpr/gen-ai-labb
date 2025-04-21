@@ -5,10 +5,11 @@ import streamlit as st
 # Python imports
 import hmac
 import os
+import pathlib
 
 # Local imports
 import config as c
-from functions.styling import page_config, styling
+from functions.styling import page_config
 from functions.menu import menu
 
 
@@ -17,7 +18,13 @@ from functions.menu import menu
 st.logo("images/logo_main.png", icon_image = "images/logo_small.png")
 
 page_config()
-styling()
+
+def load_css(file_path):
+        with open(file_path) as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+css_path = pathlib.Path("assets/styles.css")
+load_css(css_path)
 
 # Check if language is already in session_state, else initialize it with a default value
 if 'language' not in st.session_state:
@@ -67,8 +74,8 @@ menu()
 
 ### MAIN PAGE
 
-st.image("images/logo_main.png", width = 400)
-st.markdown("###### ")
+
+st.markdown("# AI-labbet")
 
 st.image("images/header.jpg")
 st.markdown("###### ")
