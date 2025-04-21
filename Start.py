@@ -30,22 +30,31 @@ load_css(css_path)
 if 'language' not in st.session_state:
     st.session_state['language'] = "Svenska"  # Default language
 
-st.session_state["pwd_on"] = st.secrets.pwd_on
-
 ### PASSWORD
+
+if c.deployment == "streamlit":
+    st.session_state["pwd_on"] = st.secrets.pwd_on
+else:
+    st.session_state["pwd_on"] = environ.get("pwd_on")
 
 if st.session_state["pwd_on"] == "true":
 
     def check_password():
 
         if c.deployment == "streamlit":
-            passwd = st.secrets["password"]
+            passwd1 = st.secrets["password"]
+            passwd2 = st.secrets["password2"]
+            passwd3 = st.secrets["password3"]
         else:
-            passwd = environ.get("password")
+            passwd1 = environ.get("password")
+            passwd2 = environ.get("password2")
+            passwd3 = environ.get("password3")
 
         def password_entered():
-
-            if hmac.compare_digest(st.session_state["password"], passwd):
+            # Check if entered password matches either of the valid passwords
+            if (hmac.compare_digest(st.session_state["password"], passwd1) or 
+                hmac.compare_digest(st.session_state["password"], passwd2) or 
+                hmac.compare_digest(st.session_state["password"], passwd3)):
                 st.session_state["password_correct"] = True
                 del st.session_state["password"]  # Don't store the password.
             else:
@@ -63,7 +72,7 @@ if st.session_state["pwd_on"] == "true":
     if not check_password():
         st.stop()
 
-### ### ###
+############
 
 st.session_state["app_version"] = c.app_version
 st.session_state["update_date"] = c.update_date
