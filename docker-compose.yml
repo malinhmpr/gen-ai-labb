@@ -1,0 +1,19 @@
+services:
+  ai-labbet:
+    build: .
+    container_name: ai-labbet
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ai-labbet.rule=Host(`ai-labbet.labbytan.se`)"
+      - "traefik.http.routers.ai-labbet.entrypoints=websecure"
+      - "traefik.http.routers.ai-labbet.tls.certresolver=myresolver"
+      - "traefik.http.services.ai-labbet.loadbalancer.server.port=8501"
+
+networks:
+  web:
+    external: true
