@@ -4,7 +4,9 @@
 Det här är en labbyta som du snabbt kan sätta upp lokalt, via Docker eller exempelvis på [Streamlit](https://streamlit.io/), för att låta användare prova generativa AI-verktyg utan att behöva skapa egna konton.  
 Det enda som behövs är en API-nyckel från OpenAI och om du vill använda öppna språkmodeller även en API-nyckel från Groq.  
 Den här labbytan är en del av den utbildningsmiljö som jag använder och sätter upp inför exempelvis 
-workshops, kurser, masterclasses och annat.
+workshops, kurser, masterclasses och annat.  
+
+Labbytan är uppbyggd på samma sätt som många andra "chatt-tjänster", som ChatGPT. Den mesta av funktionalitet är inbyggd i samma chattfönster och använder sig av function calling med mera.
 
 ![Bild som visar labbytan v1.4.x](https://github.com/user-attachments/assets/a2748014-5d78-47a1-b6b5-469b4787ab66)
 
