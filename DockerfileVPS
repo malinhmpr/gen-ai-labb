@@ -20,7 +20,7 @@ EXPOSE 8501
 HEALTHCHECK --interval=5s --timeout=5s --start-period=60s \
   CMD curl --fail http://localhost:8501/_stcore/health || exit 1
 
-ENTRYPOINT ["streamlit", "run", "pages/chat.py", \
+ENTRYPOINT ["streamlit", "run", "Start.py", \
             "--server.port=8501", \
             "--server.address=0.0.0.0", \
             "--browser.gatherUsageStats=false", \
