@@ -31,12 +31,7 @@ def menu():
 
         st.sidebar.markdown("### Meny")
 
-        #st.sidebar.page_link("Start.py", label="Start", icon=":material/home:")
-        #st.sidebar.markdown("###### ")
-
-        #st.sidebar.markdown("### AI-labbet")
-
-        st.sidebar.page_link("pages/chat.py", label="Chat", icon=":material/forum:")
+        st.sidebar.page_link("Start.py", label="Start", icon=":material/home:")
         st.sidebar.page_link("pages/transcribe.py", label="Transkribering", icon=":material/transcribe:")
 
         st.sidebar.markdown("# ")
@@ -45,12 +40,7 @@ def menu():
 
         st.sidebar.markdown("### Menu")
 
-        #st.sidebar.page_link("Start.py", label="Start", icon=":material/home:")
-        #st.sidebar.markdown("###### ")
-
-        #st.sidebar.markdown("### AI-lab")
-
-        st.sidebar.page_link("pages/chat.py", label="Chat", icon=":material/forum:")
+        st.sidebar.page_link("Start.py", label="Start", icon=":material/home:")
         st.sidebar.page_link("pages/transcribe.py", label="Transcribe", icon=":material/transcribe:")
 
         st.sidebar.markdown("# ")
