@@ -59,6 +59,7 @@ def initialize_app():
     # Initialize LlamaIndex settings
     initialize_llama_index()
 
+
 def initialize_session_state():
     """
     Initialize session state variables with default values.
@@ -73,11 +74,12 @@ def initialize_session_state():
         # User preferences
         'language': "Svenska",
         'llm_temperature': 0.7,
-        'llm_chat_model': "OpenAI GPT-4.1",
+        'llm_chat_model': "OpenAI GPT-4.1",  # Default model (can be changed to o4-mini if needed)
         
         # Image generation settings
         'image_model': "dall-e-3",
         'image_size': "1024x1024",
+        'image_quality': "medium",  # For gpt-image-1
         
         # Document settings
         'session_id': str(uuid4()),
@@ -117,12 +119,24 @@ def initialize_llama_index():
     else:
         os.environ["OPENAI_API_KEY"] = environ.get("openai_key")
     
+    # Get the current model
+    current_model = st.session_state.llm_chat_model
+    
     # Initialize LlamaIndex settings
-    Settings.llm = LlamaOpenAI(
-        model="gpt-4.1", 
-        temperature=st.session_state.llm_temperature,
-        system_prompt=st.session_state.system_prompt
-    )
+    if current_model == "OpenAI o4-mini":
+        # For o4-mini, use fixed temperature of 1.0
+        Settings.llm = LlamaOpenAI(
+            model="o4-mini", 
+            temperature=1.0,  # Fixed temperature for o4-mini
+            system_prompt=st.session_state.system_prompt
+        )
+    else:
+        # For other models, use the user-selected temperature
+        Settings.llm = LlamaOpenAI(
+            model=get_model_name(), 
+            temperature=st.session_state.llm_temperature,
+            system_prompt=st.session_state.system_prompt
+        )
     
     Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-small")
     Settings.node_parser = SentenceSplitter(chunk_size=1024, chunk_overlap=100)
@@ -154,7 +168,7 @@ Om du inte vet svaret, svarar du att du inte vet svaret.""",
             "chat_system_prompt": "Systemprompt",
             "chat_save": "Spara",
             "chat_input_q": "Vad vill du prata om?",
-            "processing": "Bearbetar din förfrågan...",
+            "processing": "Ett ögonblick... jag jobbar på det...",
             "response_complete": "Klar!",
             "error_occurred": "Ett fel inträffade",
             "image_wait": "Skapar din bild...",
@@ -164,7 +178,23 @@ Om du inte vet svaret, svarar du att du inte vet svaret.""",
             "document_error": "Det uppstod ett fel vid bearbetning av dokumentet.",
             "thinking": "Jag tänker... Ett ögonblick...",
             "text_settings": "Textinställningar",
-            "image_settings": "Bildinställningar"
+            "image_settings": "Bildinställningar",
+            "document_mode_notification": "Du kommer nu bara kunna chatta med ditt dokument. Om du vill hoppa ur det läget, klicka då på ny chatt.",
+            "model_capabilities": "Modellens kapacitet",
+            "context_window": "Kontextfönster",
+            "image_understanding": "Bildförståelse",
+            "web_search": "Webbsökning",
+            "image_generation": "Bildgenerering",
+            "document_chat": "Dokumentchatt",
+            "text_generation": "Textgenerering",
+            "available": "Tillgänglig",
+            "not_available": "Ej tillgänglig",
+            "model_description": "Om språkmodellen",
+            "model_gpt41_desc": "Kraftfull och snabb språkmodell från OpenAI som är bra på det mesta.",
+            "model_llama4_desc": "Öppen mindre språkmodell från Meta som är bra på det mesta.",
+            "model_deepseek_desc": "Öppen mindre språkmodell från DeepSeek. Resonerande och är specialiserad mot logiska problem och matematik.",
+            "model_gemma_desc": "Kompakt liten språkmodell från Google.",
+            "model_o4mini_desc": "Kraftfull resonerande språkmodell från OpenAI med inbyggt resonerande som gör den särskilt bra på komplexa problem och matematiska uppgifter. Långsam då den 'tänker' först."
         },
         "English": {
             "chat_prompt": f"""You are a helpful AI assistant. Answer the user's questions.  
@@ -194,7 +224,23 @@ If you don't know the answer, respond that you don't know the answer.""",
             "document_error": "An error occurred while processing the document.",
             "thinking": "I'm thinking... One moment...",
             "text_settings": "Text settings",
-            "image_settings": "Image settings"
+            "image_settings": "Image settings",
+            "document_mode_notification": "You will now only be able to chat with your document. If you want to exit this mode, click on new chat.",
+            "model_capabilities": "Model Capabilities",
+            "context_window": "Context Window",
+            "image_understanding": "Image Understanding",
+            "web_search": "Web Search",
+            "image_generation": "Image Generation", 
+            "document_chat": "Document Chat",
+            "text_generation": "Text Genereration",
+            "available": "Available",
+            "not_available": "Not Available",
+            "model_description": "Description",
+            "model_gpt41_desc": "Powerful model with support for all features",
+            "model_llama4_desc": "Supports image understanding, no tool functions",
+            "model_deepseek_desc": "Text-only features, no images or search",
+            "model_gemma_desc": "Compact text model, limited context",
+            "model_o4mini_desc": "Compact but powerful reasoning model from OpenAI with built-in 'thinking' that makes it particularly good at complex problems and mathematical tasks"
         }
     }
     
@@ -204,6 +250,105 @@ If you don't know the answer, respond that you don't know the answer.""",
     # Initialize system prompt if not already set
     if 'system_prompt' not in st.session_state:
         st.session_state.system_prompt = st.session_state.translations["chat_prompt"]
+
+
+def display_model_capabilities():
+    """
+    Display the capabilities of the currently selected model in the sidebar.
+    """
+    # Get the current model
+    current_model = st.session_state["llm_chat_model"]
+    translations = st.session_state.translations
+    
+    # Define capabilities for each model
+    model_capabilities = {
+        "OpenAI GPT-4.1": {
+            "text_generation": True,
+            "image_generation": True,
+            "image_understanding": True,
+            "web_search": True,
+            "document_chat": True,
+            "description": translations["model_gpt41_desc"],
+            "context_window": "1M tokens"
+        },
+        "OpenAI o4-mini": {
+            "text_generation": True,
+            "image_generation": True,
+            "image_understanding": True,
+            "web_search": True,
+            "document_chat": True,
+            "description": translations["model_o4mini_desc"],
+            "context_window": "200K tokens"
+        },
+        "Llama 4 Scout": {
+            "text_generation": True,
+            "image_generation": False,
+            "image_understanding": True,
+            "web_search": False,
+            "document_chat": False,
+            "description": translations["model_llama4_desc"],
+            "context_window": "131K tokens"
+        },
+        "Deep Seek R1 70B": {
+            "text_generation": True,
+            "image_generation": False,
+            "image_understanding": False,
+            "web_search": False,
+            "document_chat": False,
+            "description": translations["model_deepseek_desc"],
+            "context_window": "128K tokens"
+        },
+        "Gemma2 9B": {
+            "text_generation": True,
+            "image_generation": False,
+            "image_understanding": False,
+            "web_search": False,
+            "document_chat": False,
+            "description": translations["model_gemma_desc"],
+            "context_window": "8K tokens"
+        }
+    }
+    
+    # Get capabilities for the current model
+    capabilities = model_capabilities.get(current_model, {})
+    
+    # Create a status box in the sidebar
+    with st.sidebar.container(border = True):
+        # Display model description
+        st.markdown(f"### :material/dashboard: {current_model}")
+        
+        st.html(f"""<p class="custom-p"><strong>{translations['model_description']}:</strong> {capabilities.get('description', '')}""")
+    
+        # Create a list of only available capabilities
+        available_capabilities = []
+        capability_map = {
+            "text_generation": translations["text_generation"],
+            "image_generation": translations["image_generation"],
+            "image_understanding": translations["image_understanding"],
+            "web_search": translations["web_search"],
+            "document_chat": translations["document_chat"]
+        }
+        
+        # Add only the available capabilities to the list
+        for key, display_name in capability_map.items():
+            if capabilities.get(key, False):
+                available_capabilities.append(display_name)
+        
+        # Display heading for available capabilities
+        if available_capabilities:
+            # Create the header
+            html_content = """<p class="custom-p"><strong>Funktionalitet och verktyg</strong></p>"""
+            
+            # Create individual paragraph tags for each capability
+            for feature in available_capabilities:
+                html_content += f"""<p class="custom-p">{feature}</p>"""
+            
+            # Render the complete HTML in one call
+            st.html(html_content)
+        else:
+            st.html("""<p class="custom-p">Inga funktioner tillgängliga för denna modell.</p>""")
+
+        st.html(f"""<p class="custom-p"><strong>{translations['context_window']}:</strong> {capabilities.get('context_window', '')}""")
     
 
 #############################################
@@ -461,7 +606,12 @@ def define_tools():
                             "type": "string",
                             "enum": ["1024x1024", "1792x1024", "1024x1792"],
                             "description": "The size of the image to generate"
-                        }
+                        },
+                        "quality": {
+                            "type": "string",
+                            "enum": ["medium", "high"],
+                            "description": "The quality of the generated image (for gpt-image-1 model only)"
+                        },
                     },
                     "required": ["prompt"]
                 }
@@ -493,6 +643,13 @@ def define_tools():
     ]
     return tools
 
+# In the execute_image_generation_tool function, we need to handle different size formats for different models
+
+# First, let's make sure we have valid sizes for each model
+# DALL-E 2 supports: "256x256", "512x512", "1024x1024"
+# DALL-E 3 supports: "1024x1024", "1792x1024", "1024x1792"
+# GPT-Image-1 supports: "1024x1024", etc.
+
 def execute_image_generation_tool(tool_call, message_placeholder):
     """
     Execute the image generation tool called by the LLM.
@@ -509,7 +666,10 @@ def execute_image_generation_tool(tool_call, message_placeholder):
         arguments = json.loads(tool_call["arguments"])
         prompt = arguments["prompt"]
         is_modification = arguments.get("is_modification", False)
-        size = arguments.get("size", st.session_state["image_size"])
+        requested_size = arguments.get("size", st.session_state["image_size"])
+        
+        # Get quality from arguments or session state (for gpt-image-1)
+        quality = arguments.get("quality", st.session_state.get("image_quality", "high"))
         
         # Show generation status
         with st.spinner(st.session_state.translations["image_generating"], show_time=True):
@@ -524,26 +684,74 @@ def execute_image_generation_tool(tool_call, message_placeholder):
             if is_modification and st.session_state.get("last_image_prompt"):
                 final_prompt = f"Based on this previous idea: {st.session_state['last_image_prompt']}, now {prompt}"
             
-            # Generate the image
-            response = client.images.generate(
-                model=st.session_state["image_model"],
-                prompt=final_prompt,
-                size=size,
-                style="vivid",
-                n=1,
-            )
+            # Generate the image with model-specific parameters
+            model = st.session_state["image_model"]
+            
+            # Handle different model parameters
+            if model == "gpt-image-1":
+                # For gpt-image-1, use its specific parameters
+                response = client.images.generate(
+                    model=model,
+                    prompt=final_prompt,
+                    size=requested_size,
+                    quality=quality,
+                    n=1,
+                )
+                
+                # GPT-Image-1 might return base64 data instead of a URL
+                if hasattr(response, 'data') and hasattr(response.data[0], 'b64_json'):
+                    # Get the base64 data and convert to URL format for displaying
+                    image_base64 = response.data[0].b64_json
+                    image_url = f"data:image/png;base64,{image_base64}"
+                else:
+                    # Handle normal URL response
+                    image_url = response.data[0].url
+                
+            elif model == "dall-e-2":
+                # DALL-E 2 only supports specific sizes
+                # Map requested size to a supported size, defaulting to 1024x1024
+                valid_sizes = ["256x256", "512x512", "1024x1024"]
+                size = "1024x1024"  # Default to this if the requested size isn't supported
+                
+                if requested_size in valid_sizes:
+                    size = requested_size
+                
+                # Generate with DALL-E 2 specific parameters
+                response = client.images.generate(
+                    model=model,
+                    prompt=final_prompt,
+                    size=size,
+                    n=1,
+                )
+                
+                # Get the URL for display
+                image_url = response.data[0].url
+                
+            elif model == "dall-e-3":
+                # DALL-E 3 supports different sizes and the style parameter
+                response = client.images.generate(
+                    model=model,
+                    prompt=final_prompt,
+                    size=requested_size,
+                    style="vivid",
+                    n=1,
+                )
+                
+                # Get the URL for display
+                image_url = response.data[0].url
             
             # Save this prompt for future reference
             st.session_state["last_image_prompt"] = final_prompt
             
-            # Return the image URL and prompt
-            return response.data[0].url, final_prompt
+            # Return the image URL for display and the prompt for storing in chat
+            return image_url, final_prompt
             
     except Exception as e:
         error_msg = f"{st.session_state.translations['image_generation_error']} {str(e)}"
         st.error(error_msg)
         message_placeholder.markdown(error_msg)
         return None, ""
+    
 
 def execute_web_search_tool(tool_call, message_placeholder):
     """
@@ -661,6 +869,7 @@ def get_model_name() -> str:
     """
     model_map = {
         "OpenAI GPT-4.1": "gpt-4.1",
+        "OpenAI o4-mini": "o4-mini",
         "Deep Seek R1 70B": "deepseek-r1-distill-llama-70b", 
         "Gemma2 9B": "gemma2-9b-it",
         "Llama 4 Scout": "meta-llama/llama-4-scout-17b-16e-instruct"
@@ -676,7 +885,7 @@ def is_vision_capable_model() -> bool:
     """
     return (
         ("OpenAI" in st.session_state["llm_chat_model"] and 
-        ("GPT-4.1" in st.session_state["llm_chat_model"])) or
+        ("GPT-4.1" in st.session_state["llm_chat_model"] or "o4-mini" in st.session_state["llm_chat_model"])) or
         st.session_state["llm_chat_model"] == "Llama 4 Scout"
     )
 
@@ -780,7 +989,10 @@ def process_llm_request(client, processed_messages, message_placeholder, is_docu
     full_response = ""
     tool_calls = None
     model_name = get_model_name()
-    temperature = st.session_state["llm_temperature"]
+    
+    # Check if we're using o4-mini (which doesn't support temperature)
+    is_o4_mini = model_name == "o4-mini"
+    temperature = None if is_o4_mini else st.session_state["llm_temperature"]
     
     # Only OpenAI models currently support tools
     if "OpenAI" in st.session_state["llm_chat_model"]:
@@ -788,14 +1000,19 @@ def process_llm_request(client, processed_messages, message_placeholder, is_docu
         tools = define_tools()
         
         # Create the stream with tool calling enabled
-        stream = client.chat.completions.create(
-            model=model_name,
-            temperature=temperature,
-            messages=processed_messages,
-            tools=tools,
-            tool_choice="auto",  # Let the model decide when to use tools
-            stream=True,
-        )
+        stream_params = {
+            "model": model_name,
+            "messages": processed_messages,
+            "tools": tools,
+            "tool_choice": "auto",  # Let the model decide when to use tools
+            "stream": True,
+        }
+        
+        # Only add temperature if not using o4-mini
+        if not is_o4_mini:
+            stream_params["temperature"] = temperature
+            
+        stream = client.chat.completions.create(**stream_params)
         
         # Process the streaming response
         collected_tool_calls = {}
@@ -833,28 +1050,38 @@ def process_llm_request(client, processed_messages, message_placeholder, is_docu
     else:
         # For non-OpenAI models, just handle text responses
         if st.session_state["llm_chat_model"] == "Llama 4 Scout":
-            stream = client.chat.completions.create(
-                messages=processed_messages,
-                model=model_name,
-                temperature=temperature,
-                max_tokens=1024,
-                top_p=1,
-                stop=None,
-                stream=True,
-            )
+            stream_params = {
+                "messages": processed_messages,
+                "model": model_name,
+                "max_tokens": 1024,
+                "top_p": 1,
+                "stop": None,
+                "stream": True,
+            }
+            
+            # Add temperature only if not using o4-mini (for consistency)
+            if not is_o4_mini:
+                stream_params["temperature"] = temperature
+                
+            stream = client.chat.completions.create(**stream_params)
         else:
             # For non-vision models, extract just the text
             text_only_messages = process_text_only_messages(processed_messages)
             
-            stream = client.chat.completions.create(
-                messages=text_only_messages,
-                model=model_name,
-                temperature=temperature,
-                max_tokens=1024,
-                top_p=1,
-                stop=None,
-                stream=True,
-            )
+            stream_params = {
+                "messages": text_only_messages,
+                "model": model_name,
+                "max_tokens": 1024,
+                "top_p": 1,
+                "stop": None,
+                "stream": True,
+            }
+            
+            # Add temperature only if not using o4-mini (for consistency)
+            if not is_o4_mini:
+                stream_params["temperature"] = temperature
+                
+            stream = client.chat.completions.create(**stream_params)
         
         for chunk in stream:
             if chunk.choices[0].delta.content is not None:
@@ -923,13 +1150,15 @@ def generate_response(message_placeholder):
                     image_url, final_prompt = execute_image_generation_tool(tool_call, message_placeholder)
                     
                     if image_url:
-                        # Display the image
+                        # Display the image in the UI
                         st.image(image_url, caption=final_prompt)
                         
-                        # Add to conversation history
+                        # Add to conversation history - Store BOTH the prompt text AND the image URL
+                        # Use display_images for the URL so it's properly rendered in chat history
                         st.session_state.messages.append({
                             "role": "assistant", 
-                            "content": image_url
+                            "content": f"I generated an image based on your request: \"{final_prompt}\"",
+                            "display_images": [image_url]  # Store the URL in display_images for rendering
                         })
                         
                         # If there was also a text response, add it too
@@ -986,15 +1215,12 @@ def render_sidebar():
     """
     menu()
     
-    #st.sidebar.success("Språkmodell: " + st.session_state["llm_chat_model"])
+    # Display the model capabilities
+    display_model_capabilities()
     
-    # Show document mode indicator if active
-    if st.session_state.document_mode:
-        st.sidebar.info("Dokumentläge: Aktivt")
-        
-    # Show document processing indicator if active
-    if st.session_state.get("document_processing", False):
-        st.sidebar.warning("Bearbetar dokument...")
+    with st.sidebar.container(border = True):
+        st.html(f"""<p class="custom-p"><strong>Version:</strong> {st.session_state["app_version"]}<br />  
+        <strong>Uppdaterad</strong>: {st.session_state["update_date"]}</p>""")
 
 def render_message_history():
     """
@@ -1047,6 +1273,13 @@ def reset_chat():
     # Reset system prompt to default
     st.session_state.system_prompt = st.session_state.translations["chat_prompt"]
 
+def on_model_change():
+    """
+    Callback function that runs when the model selection changes.
+    Updates the session state to reflect the new model immediately.
+    """
+    st.session_state["llm_chat_model"] = st.session_state["model_selector"]
+
 def render_chat_controls():
     """
     Render chat controls including model selection, clear button and settings expander.
@@ -1054,15 +1287,16 @@ def render_chat_controls():
     col1, col2, col3 = st.columns([2, 1, 2])
     
     with col1:
-        # Move model selection here
+        # Model selection with o4-mini
+        model_options = ["Gemma2 9B", "Deep Seek R1 70B", "Llama 4 Scout", "OpenAI GPT-4.1", "OpenAI o4-mini"]
         llm_model = st.selectbox(
             "Model",  # Shorter label to fit in column
-            ["Gemma2 9B", "Deep Seek R1 70B", "Llama 4 Scout", "OpenAI GPT-4.1"],
-            index=["Gemma2 9B", "Deep Seek R1 70B", "Llama 4 Scout", "OpenAI GPT-4.1"].index(st.session_state["llm_chat_model"]),
-            label_visibility="collapsed"  # Hide label to save space
+            model_options,
+            index=model_options.index(st.session_state["llm_chat_model"]) if st.session_state["llm_chat_model"] in model_options else 3,  # Default to GPT-4.1
+            label_visibility="collapsed",  # Hide label to save space
+            key="model_selector",  # Add a unique key
+            on_change=on_model_change  # Add callback function
         )
-        # Update session state
-        st.session_state["llm_chat_model"] = llm_model
     
     with col2:
         if st.button(st.session_state.translations["chat_clear_chat"], type="secondary", icon=":material/new_window:", use_container_width=True):
@@ -1108,15 +1342,25 @@ def render_settings():
             st.form_submit_button(st.session_state.translations["chat_save"])
     
     with image_tab:
-        # Image model selection
+        # Image model selection - UPDATED to include gpt-image-1
         image_model = st.selectbox(
             "Image Generation Model",
-            ["dall-e-2", "dall-e-3"],
-            index=["dall-e-2", "dall-e-3"].index(st.session_state["image_model"]),
+            ["dall-e-2", "dall-e-3", "gpt-image-1"],
+            index=["dall-e-2", "dall-e-3", "gpt-image-1"].index(st.session_state["image_model"]) 
+                if st.session_state["image_model"] in ["dall-e-2", "dall-e-3", "gpt-image-1"] else 2,
         )
         
         # Update the session_state
         st.session_state["image_model"] = image_model
+        
+        # Add quality setting for gpt-image-1
+        if image_model == "gpt-image-1":
+            quality = st.selectbox(
+                "Image Quality",
+                ["medium", "high"],
+                index=["medium", "high"].index(st.session_state.get("image_quality", "medium"))
+            )
+            st.session_state["image_quality"] = quality
         
         # Warning about OpenAI model requirements for tools
         if not "OpenAI" in st.session_state["llm_chat_model"]:
@@ -1177,6 +1421,12 @@ def handle_chat_input():
                     "role": "user", 
                     "content": f"I've uploaded the following document(s): {', '.join(doc_names)}.",
                     "is_system_message": True  # Mark as system message so we know it wasn't typed by user
+                })
+                
+                # Add the document mode notification immediately
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": st.session_state.translations["document_mode_notification"]
                 })
                 
                 # Set document mode
@@ -1292,9 +1542,10 @@ def main():
                 # If no original question, just stop processing
                 else:
                     st.session_state.document_processing = False
+                    # Add the document mode notification
                     st.session_state.messages.append({
                         "role": "assistant", 
-                        "content": "You can now ask me questions about the content."
+                        "content": st.session_state.translations["document_mode_notification"]
                     })
     
     # Render chat history (filter out system messages)
